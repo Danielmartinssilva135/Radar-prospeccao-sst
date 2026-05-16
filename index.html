@@ -38,7 +38,8 @@
 
     <script>
         async function buscarNaBase() {
-            const cnpj = document.getElementById('cnpjInput').value.replace(/\D/g, '');
+            const cnpjRaw = document.getElementById('cnpjInput').value;
+            const cnpj = cnpjRaw.replace(/\D/g, '');
             const divResultado = document.getElementById('resultado');
 
             if (cnpj.length !== 14) {
@@ -46,18 +47,19 @@
                 return;
             }
 
-            divResultado.innerHTML = "<div class='text-emerald-500 animate-pulse text-center font-bold uppercase'>Acessando base de dados do Governo...</div>";
+            divResultado.innerHTML = "<div class='text-emerald-500 animate-pulse text-center font-bold uppercase'>Conectando ao Portal da Transparência...</div>";
 
-            // Ponte (Proxy) para evitar erro de conexão CORS
+            // Limpeza automática da chave para evitar erros de caractere
+            const minhaChave = "0131b585c4b527e5ca52551d8ff7dbe3".trim();
             const proxy = 'https://cors-anywhere.herokuapp.com/';
-            const targetUrl = `https://api.portaldatransparencia.gov.br/api-de-dados/ceis?cnpj=${cnpj}&pagina=1`;
+            const apiTarget = 'https://api.portaldatransparencia.gov.br/api-de-dados/ceis?cnpj=' + cnpj + '&pagina=1';
 
             try {
-                const resposta = await fetch(proxy + targetUrl, {
+                const resposta = await fetch(proxy + apiTarget, {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
-                        'chave-api-dados': '0131b585c4b527e5ca52551d8ff7dbe3'
+                        'chave-api-dados': minhaChave
                     }
                 });
 
@@ -68,7 +70,7 @@
                         divResultado.innerHTML = "";
                         dados.forEach(item => {
                             divResultado.innerHTML += `
-                                <div class="bg-zinc-900 border-l-8 border-emerald-500 p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+                                <div class="bg-zinc-900 border-l-8 border-emerald-500 p-8 rounded-3xl shadow-2xl relative mb-4">
                                     <div class="absolute top-0 right-0 bg-emerald-500 text-black px-4 py-1 text-[10px] font-black uppercase tracking-tighter">Oportunidade SST</div>
                                     <h2 class="font-black text-2xl mb-1 text-white uppercase">${item.pessoa.nomeRazaoSocial}</h2>
                                     <p class="text-sm text-zinc-500 mb-6 font-mono font-bold italic">CNPJ: ${item.pessoa.cnpjFormatado}</p>
@@ -82,14 +84,6 @@
                                             <span class="text-zinc-500 block mb-1 uppercase text-xs font-bold">Órgão Sancionador:</span> 
                                             <span class="text-white font-bold">${item.orgaoSancionador.nome}</span>
                                         </div>
-                                        <div class="bg-black/40 p-4 rounded-xl border border-zinc-800">
-                                            <span class="text-zinc-500 block mb-1 uppercase text-xs font-bold">Início da Sanção:</span> 
-                                            <span class="text-white font-bold">${item.dataInicioSancao}</span>
-                                        </div>
-                                        <div class="bg-black/40 p-4 rounded-xl border border-zinc-800">
-                                            <span class="text-zinc-500 block mb-1 uppercase text-xs font-bold">Publicação:</span> 
-                                            <span class="text-white font-bold">${item.dataPublicacao || 'Não informada'}</span>
-                                        </div>
                                     </div>
                                     <button onclick="window.print()" class="mt-6 w-full bg-zinc-100 hover:bg-white text-black font-black py-4 rounded-2xl transition-all uppercase text-sm tracking-widest">
                                         Gerar Relatório de Visita Técnica
@@ -101,9 +95,9 @@
                         divResultado.innerHTML = "<div class='bg-zinc-900/50 border border-zinc-800 p-12 rounded-3xl text-center text-zinc-500 font-bold uppercase'>Nenhuma sanção ativa encontrada para este CNPJ no CEIS.</div>";
                     }
                 } else if (resposta.status === 403) {
-                   divResultado.innerHTML = "<div class='text-yellow-500 text-center p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl'><b>Acesso Pendente:</b> Para liberar a conexão do radar, <a href='https://cors-anywhere.herokuapp.com/corsdemo' target='_blank' class='underline font-bold text-white'>CLIQUE AQUI</a> e aperte o botão 'Request temporary access'. Em seguida, tente pesquisar o CNPJ novamente aqui nesta tela.</div>";
+                   divResultado.innerHTML = "<div class='text-yellow-500 text-center p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl'><b>Acesso Pendente no Proxy:</b><br><br> <a href='https://cors-anywhere.herokuapp.com/corsdemo' target='_blank' class='bg-white text-black px-4 py-2 rounded-lg font-bold'>CLIQUE AQUI PARA ATIVAR</a><br><br>Após clicar e apertar o botão cinza lá, volte aqui e pesquise novamente.</div>";
                 } else {
-                    divResultado.innerHTML = `<div class='text-red-500 text-center p-6 font-bold uppercase underline'>Erro de Comunicação (Status: ${resposta.status})</div>`;
+                    divResultado.innerHTML = `<div class='text-red-500 text-center p-6 font-bold uppercase underline'>Erro de Comunicação (Status: ${resposta.status}) - Verifique sua chave de API.</div>`;
                 }
             } catch (erro) {
                 divResultado.innerHTML = "<div class='text-red-500 text-center p-6 font-bold uppercase underline italic'>Erro ao conectar com o servidor do Governo.</div>";
