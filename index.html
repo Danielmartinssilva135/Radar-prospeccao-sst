@@ -49,7 +49,7 @@
 
             divResultado.innerHTML = "<div class='text-emerald-500 animate-pulse text-center font-bold uppercase'>Conectando ao Portal da Transparência...</div>";
 
-            // Limpeza automática da chave para evitar erros de caractere
+            // CORREÇÃO DEFINITIVA: O .trim() remove o espaço antes do "0" automaticamente
             const minhaChave = "0131b585c4b527e5ca52551d8ff7dbe3".trim();
             const proxy = 'https://cors-anywhere.herokuapp.com/';
             const apiTarget = 'https://api.portaldatransparencia.gov.br/api-de-dados/ceis?cnpj=' + cnpj + '&pagina=1';
@@ -92,12 +92,12 @@
                             `;
                         });
                     } else {
-                        divResultado.innerHTML = "<div class='bg-zinc-900/50 border border-zinc-800 p-12 rounded-3xl text-center text-zinc-500 font-bold uppercase'>Nenhuma sanção ativa encontrada para este CNPJ no CEIS.</div>";
+                        divResultado.innerHTML = "<div class='bg-zinc-900/50 border border-zinc-800 p-12 rounded-3xl text-center text-zinc-500 font-bold uppercase'>Nenhuma sanção ativa encontrada para este CNPJ.</div>";
                     }
                 } else if (resposta.status === 403) {
-                   divResultado.innerHTML = "<div class='text-yellow-500 text-center p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl'><b>Acesso Pendente no Proxy:</b><br><br> <a href='https://cors-anywhere.herokuapp.com/corsdemo' target='_blank' class='bg-white text-black px-4 py-2 rounded-lg font-bold'>CLIQUE AQUI PARA ATIVAR</a><br><br>Após clicar e apertar o botão cinza lá, volte aqui e pesquise novamente.</div>";
+                   divResultado.innerHTML = "<div class='text-yellow-500 text-center p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl font-bold uppercase'>Acesso Pendente. Clique no botão de ativação do servidor de ponte e tente novamente.</div>";
                 } else {
-                    divResultado.innerHTML = `<div class='text-red-500 text-center p-6 font-bold uppercase underline'>Erro de Comunicação (Status: ${resposta.status}) - Verifique sua chave de API.</div>`;
+                    divResultado.innerHTML = `<div class='text-red-500 text-center p-6 font-bold uppercase'>Erro de Comunicação (Status: ${resposta.status}). Verifique se a chave está correta.</div>`;
                 }
             } catch (erro) {
                 divResultado.innerHTML = "<div class='text-red-500 text-center p-6 font-bold uppercase underline italic'>Erro ao conectar com o servidor do Governo.</div>";
