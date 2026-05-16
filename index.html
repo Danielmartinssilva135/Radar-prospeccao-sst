@@ -3,39 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radar de Prospecção SST - Daniel Martins</title>
+    <title>Radar SST - Daniel Martins</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { background: #09090b; color: #f4f4f5; font-family: 'Inter', sans-serif; }
         .glass-card { background: rgba(24, 24, 27, 0.8); border: 1px solid rgba(63, 63, 70, 0.4); backdrop-filter: blur(10px); }
+        .btn-glow:hover { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
     </style>
 </head>
 <body class="p-4 md:p-10">
 
     <div class="max-w-4xl mx-auto">
         <header class="mb-10 text-center">
-            <h1 class="text-4xl font-black text-emerald-500 tracking-tighter uppercase italic italic">
+            <h1 class="text-4xl font-black text-emerald-500 tracking-tighter uppercase italic">
                 Radar de Prospecção Técnica
             </h1>
             <p class="text-zinc-500 mt-2 font-bold uppercase tracking-widest text-xs">
-                Engenheiro Daniel Martins | Consulta Oficial CEIS-CGU
+                Engenheiro Daniel Martins | Consulta CEIS-CGU
             </p>
         </header>
 
         <div class="glass-card rounded-3xl p-8 mb-8 shadow-2xl">
             <div class="flex flex-col md:flex-row gap-4">
-                <input type="text" id="cnpjInput" placeholder="Digite o CNPJ (somente números)" 
+                <input type="text" id="cnpjInput" placeholder="Digite o CNPJ (só números)" 
                     class="flex-1 bg-black border border-zinc-700 rounded-2xl px-6 py-4 text-lg outline-none focus:border-emerald-500 transition-all text-white font-mono">
                 <button onclick="buscarNaBase()" 
-                    class="bg-emerald-500 hover:bg-emerald-400 text-black font-black px-10 py-4 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 uppercase">
+                    class="bg-emerald-500 hover:bg-emerald-400 text-black font-black px-10 py-4 rounded-2xl transition-all btn-glow uppercase tracking-tighter">
                     Consultar Agora
                 </button>
             </div>
         </div>
 
         <div id="resultado" class="grid gap-6">
-            <div class="text-zinc-700 border-2 border-dashed border-zinc-900 rounded-3xl p-16 text-center uppercase font-black tracking-widest text-sm">
+            <div class="text-zinc-700 border-2 border-dashed border-zinc-800 rounded-3xl p-16 text-center uppercase font-black tracking-widest text-sm">
                 Aguardando Identificação de Conformidade...
             </div>
         </div>
@@ -58,31 +59,28 @@
                     <div class='text-emerald-500 font-black uppercase tracking-tighter'>Acessando Portal da Transparência...</div>
                 </div>`;
 
-            // Chave purificada e sem espaços invisíveis
+            // Chave purificada (sem espaços)
             const minhaChave = "0131b585c4b527e5ca52551d8ff7dbe3".trim();
             const targetUrl = "https://api.portaldatransparencia.gov.br/api-de-dados/ceis?cnpj=" + cnpj + "&pagina=1";
             
-            // Usando AllOrigins RAW para garantir que os headers da chave passem intactos
-            const finalUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(targetUrl);
+            // Usamos AllOrigins para encapsular o pedido e evitar o erro de bloqueio do navegador
+            const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(targetUrl);
 
             try {
-                const resposta = await fetch(finalUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'chave-api-dados': minhaChave
-                    }
-                });
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
+                
+                // O AllOrigins traz o resultado como texto dentro de 'contents'
+                // Precisamos converter esse texto em um objeto de dados real
+                const lista = JSON.parse(data.contents);
 
-                if (resposta.ok) {
-                    const dados = await resposta.json();
-                    
-                    if(dados && dados.length > 0) {
+                if (Array.isArray(lista)) {
+                    if (lista.length > 0) {
                         divResultado.innerHTML = "";
-                        dados.forEach(item => {
+                        lista.forEach(item => {
                             divResultado.innerHTML += `
-                                <div class="bg-zinc-900 border-l-8 border-emerald-500 p-8 rounded-3xl shadow-2xl relative overflow-hidden transition-all hover:scale-[1.01]">
-                                    <div class="absolute top-0 right-0 bg-emerald-500 text-black px-4 py-1 text-[10px] font-black uppercase tracking-tighter">Oportunidade SST</div>
+                                <div class="bg-zinc-900 border-l-8 border-emerald-500 p-8 rounded-3xl shadow-2xl relative mb-4">
+                                    <div class="absolute top-0 right-0 bg-emerald-500 text-black px-4 py-1 text-[10px] font-black uppercase tracking-tighter italic">Sanção Ativa</div>
                                     <h2 class="font-black text-2xl text-white uppercase leading-tight mb-2">${item.pessoa.nomeRazaoSocial}</h2>
                                     <p class="text-xs text-zinc-500 mb-6 font-mono font-bold uppercase tracking-widest italic">CNPJ: ${item.pessoa.cnpjFormatado}</p>
                                     
@@ -99,27 +97,24 @@
                                     <button onclick="window.print()" class="mt-8 w-full bg-zinc-100 hover:bg-white text-black font-black py-4 rounded-2xl transition-all uppercase text-xs tracking-widest shadow-xl">
                                         Gerar Relatório de Visita Técnica
                                     </button>
-                                </div>
-                            `;
+                                </div>`;
                         });
                     } else {
                         divResultado.innerHTML = `
                             <div class='bg-zinc-900/50 border border-zinc-800 p-16 rounded-3xl text-center shadow-inner'>
                                 <div class='text-zinc-500 font-black uppercase tracking-widest text-sm mb-2'>Consulta Concluída</div>
-                                <div class='text-zinc-400 font-bold uppercase italic text-xs underline'>Nenhuma sanção ativa encontrada para este CNPJ no CEIS.</div>
+                                <div class='text-zinc-400 font-bold uppercase italic text-xs underline text-center'>Nenhuma sanção ativa encontrada para este CNPJ no CEIS.</div>
                             </div>`;
                     }
-                } else if (resposta.status === 401 || resposta.status === 403) {
-                    divResultado.innerHTML = "<div class='text-red-500 text-center p-6 font-black uppercase border border-red-500/20 rounded-2xl'>ERRO DE CREDENCIAL: Sua chave API ainda não foi validada pelo Governo. Aguarde algumas horas.</div>";
                 } else {
-                    divResultado.innerHTML = `<div class='text-red-500 text-center p-6 font-black uppercase underline'>Erro de Servidor (Status: ${resposta.status})</div>`;
+                    throw new Error("Resposta inválida do servidor.");
                 }
             } catch (erro) {
                 divResultado.innerHTML = `
-                    <div class='text-yellow-500 text-center p-8 bg-yellow-500/5 border border-yellow-500/10 rounded-3xl'>
-                        <p class='font-black uppercase italic mb-4'>O sinal foi interrompido pelo navegador.</p>
-                        <p class='text-xs text-zinc-500 font-bold uppercase tracking-widest underline'>
-                            Tente abrir via Dados Móveis (4G) ou em uma aba anônima para limpar o cache.
+                    <div class='text-red-500 text-center p-8 bg-red-500/5 border border-red-500/10 rounded-3xl'>
+                        <p class='font-black uppercase italic mb-2'>Erro de Credencial ou Conexão</p>
+                        <p class='text-xs text-zinc-500 font-bold uppercase tracking-widest'>
+                            Verifique se sua chave API foi ativada pelo Governo ou tente acessar via 4G no celular.
                         </p>
                     </div>`;
             }
