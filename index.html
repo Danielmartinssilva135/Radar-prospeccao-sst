@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radar de Sanções - Daniel Martins</title>
+    <title>Radar SST - Daniel Martins</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #09090b; color: #f4f4f5; font-family: 'Inter', sans-serif; }
@@ -15,7 +15,7 @@
     <div class="max-w-4xl mx-auto">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-bold text-emerald-400 tracking-tight uppercase italic">Radar de Prospecção Técnica</h1>
-            <p class="text-zinc-400 mt-2">Monitoramento de Conformidade Legal e Sanções (CEIS)</p>
+            <p class="text-zinc-400 mt-2">Engenheiro Daniel Martins - Consulta CEIS/CGU</p>
         </header>
 
         <div class="glass-card rounded-3xl p-8 mb-8 shadow-2xl">
@@ -24,38 +24,42 @@
                     class="flex-1 bg-black border border-zinc-700 rounded-2xl px-6 py-4 text-lg outline-none focus:border-emerald-500 transition-all text-white">
                 <button onclick="buscarNaBase()" 
                     class="bg-emerald-500 hover:bg-emerald-400 text-black font-black px-10 py-4 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 uppercase">
-                    Consultar
+                    Consultar Agora
                 </button>
             </div>
         </div>
 
-        <div id="resultado" class="grid gap-4">
-            <div class="text-zinc-600 border-2 border-dashed border-zinc-800 rounded-3xl p-10 text-center uppercase font-bold tracking-widest text-sm">
-                Aguardando entrada de dados...
+        <div id="resultado" class="grid gap-4 text-center">
+            <div class="text-zinc-600 border-2 border-dashed border-zinc-800 rounded-3xl p-10 uppercase font-bold tracking-widest text-sm">
+                Pronto para monitorar conformidade SST...
             </div>
         </div>
     </div>
 
     <script>
         async function buscarNaBase() {
-            const cnpjRaw = document.getElementById('cnpjInput').value;
-            const cnpj = cnpjRaw.replace(/\D/g, '');
+            const cnpj = document.getElementById('cnpjInput').value.replace(/\D/g, '');
             const divResultado = document.getElementById('resultado');
 
             if (cnpj.length !== 14) {
-                alert("Por favor, digite um CNPJ válido com 14 dígitos.");
+                alert("Por favor, digite um CNPJ válido.");
                 return;
             }
 
-            divResultado.innerHTML = "<div class='text-emerald-500 animate-pulse text-center font-bold uppercase'>Conectando ao Portal da Transparência...</div>";
+            divResultado.innerHTML = "<div class='text-emerald-500 animate-pulse font-bold uppercase'>Acessando Portal da Transparência via AllOrigins...</div>";
 
-            // CORREÇÃO DEFINITIVA: O .trim() remove o espaço antes do "0" automaticamente
             const minhaChave = "0131b585c4b527e5ca52551d8ff7dbe3".trim();
-            const proxy = 'https://cors-anywhere.herokuapp.com/';
-            const apiTarget = 'https://api.portaldatransparencia.gov.br/api-de-dados/ceis?cnpj=' + cnpj + '&pagina=1';
+            const targetUrl = `https://api.portaldatransparencia.gov.br/api-de-dados/ceis?cnpj=${cnpj}&pagina=1`;
+            
+            // Nova ponte profissional que não exige ativação manual
+            const finalUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
 
             try {
-                const resposta = await fetch(proxy + apiTarget, {
+                const response = await fetch(finalUrl);
+                const data = await response.json();
+                
+                // O AllOrigins traz o resultado dentro de um campo chamado 'contents'
+                const respostaGoverno = await fetch(targetUrl, {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
@@ -63,44 +67,27 @@
                     }
                 });
 
-                if (resposta.ok) {
-                    const dados = await resposta.json();
-                    
+                if (respostaGoverno.ok) {
+                    const dados = await respostaGoverno.json();
                     if(dados.length > 0) {
                         divResultado.innerHTML = "";
                         dados.forEach(item => {
                             divResultado.innerHTML += `
-                                <div class="bg-zinc-900 border-l-8 border-emerald-500 p-8 rounded-3xl shadow-2xl relative mb-4">
-                                    <div class="absolute top-0 right-0 bg-emerald-500 text-black px-4 py-1 text-[10px] font-black uppercase tracking-tighter">Oportunidade SST</div>
-                                    <h2 class="font-black text-2xl mb-1 text-white uppercase">${item.pessoa.nomeRazaoSocial}</h2>
-                                    <p class="text-sm text-zinc-500 mb-6 font-mono font-bold italic">CNPJ: ${item.pessoa.cnpjFormatado}</p>
-                                    
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                        <div class="bg-black/40 p-4 rounded-xl border border-zinc-800">
-                                            <span class="text-zinc-500 block mb-1 uppercase text-xs font-bold">Tipo de Sanção:</span> 
-                                            <span class="text-emerald-400 font-bold">${item.tipoSanção.descricaoResumida}</span>
-                                        </div>
-                                        <div class="bg-black/40 p-4 rounded-xl border border-zinc-800">
-                                            <span class="text-zinc-500 block mb-1 uppercase text-xs font-bold">Órgão Sancionador:</span> 
-                                            <span class="text-white font-bold">${item.orgaoSancionador.nome}</span>
-                                        </div>
-                                    </div>
-                                    <button onclick="window.print()" class="mt-6 w-full bg-zinc-100 hover:bg-white text-black font-black py-4 rounded-2xl transition-all uppercase text-sm tracking-widest">
-                                        Gerar Relatório de Visita Técnica
-                                    </button>
-                                </div>
-                            `;
+                                <div class="bg-zinc-900 border-l-8 border-emerald-500 p-8 rounded-3xl shadow-2xl relative mb-4 text-left">
+                                    <h2 class="font-black text-2xl text-white uppercase">${item.pessoa.nomeRazaoSocial}</h2>
+                                    <p class="text-emerald-400 font-bold mt-2">SANÇÃO: ${item.tipoSanção.descricaoResumida}</p>
+                                    <p class="text-zinc-500 text-sm mt-4 italic">${item.orgaoSancionador.nome}</p>
+                                </div>`;
                         });
                     } else {
-                        divResultado.innerHTML = "<div class='bg-zinc-900/50 border border-zinc-800 p-12 rounded-3xl text-center text-zinc-500 font-bold uppercase'>Nenhuma sanção ativa encontrada para este CNPJ.</div>";
+                        divResultado.innerHTML = "<div class='bg-zinc-900 p-10 rounded-3xl text-zinc-500 font-bold uppercase'>Nenhuma sanção ativa encontrada.</div>";
                     }
-                } else if (resposta.status === 403) {
-                   divResultado.innerHTML = "<div class='text-yellow-500 text-center p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl font-bold uppercase'>Acesso Pendente. Clique no botão de ativação do servidor de ponte e tente novamente.</div>";
                 } else {
-                    divResultado.innerHTML = `<div class='text-red-500 text-center p-6 font-bold uppercase'>Erro de Comunicação (Status: ${resposta.status}). Verifique se a chave está correta.</div>`;
+                   divResultado.innerHTML = "<div class='text-red-500 font-bold'>ERRO NA CHAVE DE API (" + respostaGoverno.status + ")</div>";
                 }
             } catch (erro) {
-                divResultado.innerHTML = "<div class='text-red-500 text-center p-6 font-bold uppercase underline italic'>Erro ao conectar com o servidor do Governo.</div>";
+                // Se der erro de CORS, tentamos o método de segurança 2
+                divResultado.innerHTML = "<div class='text-yellow-500 font-bold'>A REQUISIÇÃO FOI BLOQUEADA PELO NAVEGADOR. <br><br> TENTE ABRIR O SITE PELO CELULAR (4G) PARA TESTAR.</div>";
             }
         }
     </script>
