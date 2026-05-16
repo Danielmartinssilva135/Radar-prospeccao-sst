@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Radar de Sanções - Daniel Martins</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-950 text-white p-6">
+
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-black text-emerald-400 mb-6 uppercase tracking-tighter">
+            Pesquisa de Sanções (Portal da Transparência)
+        </h1>
+
+        <div class="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 shadow-2xl">
+            <div class="flex flex-col md:flex-row gap-4">
+                <input type="text" id="cnpjInput" placeholder="Digite o CNPJ (só números)" 
+                    class="flex-1 bg-black border border-zinc-700 rounded-2xl px-5 py-4 text-lg outline-none focus:border-emerald-500">
+                <button onclick="buscarNaBase()" 
+                    class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-8 py-4 rounded-2xl transition-all">
+                    Pesquisar
+                </button>
+            </div>
+        </div>
+
+        <div id="resultado" class="mt-8 grid gap-4">
+            <div class="text-zinc-500 text-center py-10">O resultado da consulta aparecerá aqui...</div>
+        </div>
+    </div>
+
+    <script>
+        async function buscarNaBase() {
+            const cnpj = document.getElementById('cnpjInput').value.replace(/\D/g, '');
+            const divResultado = document.getElementById('resultado');
+
+            if (cnpj.length !== 14) {
+                alert("Por favor, digite um CNPJ com 14 dígitos.");
+                return;
+            }
+
+            divResultado.innerHTML = "<div class='text-emerald-500 animate-pulse text-center'>Consultando base do governo...</div>";
+
+            const url = `https://api.portaldatransparencia.gov.br/api-de-dados/ceis?cnpj=${cnpj}&pagina=1`;
+
+            try {
+                const resposta = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        // Atualizado conforme sua imagem:
+                        'chave-api-dados': '0131b585c4b527e5ca52551d8ff7dbe3' 
+                    }
+                });
+
+                if (resposta.ok) {
+                    const dados = await resposta.json();
+                    
+                    if(dados.length > 0) {
+                        divResultado.innerHTML = "";
+                        dados.forEach(item => {
+                            divResultado.innerHTML += `
+                                <div class="bg-zinc-900 border-l-4 border-emerald-500 p-6 rounded-2xl shadow-lg">
+                                    <h2 class="font-bold text-xl mb-2">${item.pessoa.nomeRazaoSocial}</h2>
+                                    <p class="text-sm text-zinc-400 mb-4">CNPJ: ${item.pessoa.cnpjFormatado}</p>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                        <p><span class="text-zinc-500">Sanção:</span> ${item.tipoSanção.descricaoResumida}</p>
+                                        <p><span class="text-zinc-500">Órgão:</span> ${item.orgaoSancionador.nome}</p>
+                                        <p><span class="text-zinc-500">Início:</span> ${item.dataInicioSancao}</p>
+                                        <p><span class="text-zinc-500">Publicação:</span> ${item.dataPublicacao || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        divResultado.innerHTML = "<div class='bg-zinc-900 p-8 rounded-2xl text-center text-zinc-400'>Nenhuma sanção encontrada para este CNPJ no CEIS.</div>";
+                    }
+                } else {
+                    divResultado.innerHTML = `<div class='text-red-500'>Erro na comunicação (Status: ${resposta.status}). Verifique se a chave ainda está sendo ativada.</div>`;
+                }
+            } catch (erro) {
+                divResultado.innerHTML = "<div class='text-red-500'>Erro ao conectar com o servidor.</div>";
+            }
+        }
+    </script>
+</body>
+</html>
