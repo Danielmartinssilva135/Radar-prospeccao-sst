@@ -14,80 +14,87 @@
 
     <div class="max-w-4xl mx-auto">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl font-bold text-emerald-400 tracking-tight uppercase italic">Radar de Prospecção Técnica</h1>
-            <p class="text-zinc-400 mt-2">Engenheiro Daniel Martins - Consulta CEIS/CGU</p>
+            <h1 class="text-3xl font-bold text-emerald-400 tracking-tight uppercase italic font-black">Radar de Prospecção Técnica</h1>
+            <p class="text-zinc-400 mt-2 font-bold uppercase tracking-widest text-xs">Engenheiro Daniel Martins | Consulta CEIS-CGU</p>
         </header>
 
         <div class="glass-card rounded-3xl p-8 mb-8 shadow-2xl">
             <div class="flex flex-col md:flex-row gap-4">
-                <input type="text" id="cnpjInput" placeholder="Digite o CNPJ (somente números)" 
-                    class="flex-1 bg-black border border-zinc-700 rounded-2xl px-6 py-4 text-lg outline-none focus:border-emerald-500 transition-all text-white">
+                <input type="text" id="cnpjInput" placeholder="Digite o CNPJ (só números)" 
+                    class="flex-1 bg-black border border-zinc-700 rounded-2xl px-6 py-4 text-lg outline-none focus:border-emerald-500 transition-all text-white font-mono">
                 <button onclick="buscarNaBase()" 
-                    class="bg-emerald-500 hover:bg-emerald-400 text-black font-black px-10 py-4 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 uppercase">
+                    class="bg-emerald-500 hover:bg-emerald-400 text-black font-black px-10 py-4 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 uppercase tracking-tighter">
                     Consultar Agora
                 </button>
             </div>
         </div>
 
-        <div id="resultado" class="grid gap-4 text-center">
-            <div class="text-zinc-600 border-2 border-dashed border-zinc-800 rounded-3xl p-10 uppercase font-bold tracking-widest text-sm">
-                Pronto para monitorar conformidade SST...
+        <div id="resultado" class="grid gap-4">
+            <div class="text-zinc-600 border-2 border-dashed border-zinc-800 rounded-3xl p-10 text-center uppercase font-bold tracking-widest text-sm">
+                Aguardando CNPJ para monitoramento...
             </div>
         </div>
     </div>
 
     <script>
         async function buscarNaBase() {
-            const cnpj = document.getElementById('cnpjInput').value.replace(/\D/g, '');
+            const cnpjRaw = document.getElementById('cnpjInput').value;
+            const cnpj = cnpjRaw.replace(/\D/g, '');
             const divResultado = document.getElementById('resultado');
 
             if (cnpj.length !== 14) {
-                alert("Por favor, digite um CNPJ válido.");
+                alert("Por favor, digite um CNPJ válido com 14 dígitos.");
                 return;
             }
 
-            divResultado.innerHTML = "<div class='text-emerald-500 animate-pulse font-bold uppercase'>Acessando Portal da Transparência via AllOrigins...</div>";
+            divResultado.innerHTML = "<div class='text-emerald-500 animate-pulse text-center font-black uppercase tracking-tighter'>Solicitando dados ao servidor do Governo...</div>";
 
             const minhaChave = "0131b585c4b527e5ca52551d8ff7dbe3".trim();
             const targetUrl = `https://api.portaldatransparencia.gov.br/api-de-dados/ceis?cnpj=${cnpj}&pagina=1`;
             
-            // Nova ponte profissional que não exige ativação manual
-            const finalUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+            // Usando o servidor AllOrigins que é mais robusto para sites estáticos
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
 
             try {
-                const response = await fetch(finalUrl);
+                const response = await fetch(proxyUrl);
                 const data = await response.json();
                 
-                // O AllOrigins traz o resultado dentro de um campo chamado 'contents'
-                const respostaGoverno = await fetch(targetUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'chave-api-dados': minhaChave
-                    }
-                });
+                // O AllOrigins retorna os dados dentro de 'contents', que vem como texto
+                const lista = JSON.parse(data.contents);
 
-                if (respostaGoverno.ok) {
-                    const dados = await respostaGoverno.json();
-                    if(dados.length > 0) {
+                if (lista && Array.isArray(lista)) {
+                    if (lista.length > 0) {
                         divResultado.innerHTML = "";
-                        dados.forEach(item => {
+                        lista.forEach(item => {
                             divResultado.innerHTML += `
-                                <div class="bg-zinc-900 border-l-8 border-emerald-500 p-8 rounded-3xl shadow-2xl relative mb-4 text-left">
-                                    <h2 class="font-black text-2xl text-white uppercase">${item.pessoa.nomeRazaoSocial}</h2>
-                                    <p class="text-emerald-400 font-bold mt-2">SANÇÃO: ${item.tipoSanção.descricaoResumida}</p>
-                                    <p class="text-zinc-500 text-sm mt-4 italic">${item.orgaoSancionador.nome}</p>
+                                <div class="bg-zinc-900 border-l-8 border-emerald-500 p-8 rounded-3xl shadow-2xl relative mb-4">
+                                    <div class="absolute top-0 right-0 bg-emerald-500 text-black px-4 py-1 text-[10px] font-black uppercase tracking-tighter">Sócio Inadimplente / Sanção</div>
+                                    <h2 class="font-black text-2xl text-white uppercase leading-tight">${item.pessoa.nomeRazaoSocial}</h2>
+                                    <p class="text-sm text-zinc-500 mb-6 font-mono font-bold">CNPJ: ${item.pessoa.cnpjFormatado}</p>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                        <div class="bg-black/40 p-4 rounded-xl border border-zinc-800">
+                                            <span class="text-zinc-500 block mb-1 uppercase text-[10px] font-black">Tipo de Sanção:</span> 
+                                            <span class="text-emerald-400 font-bold">${item.tipoSanção.descricaoResumida}</span>
+                                        </div>
+                                        <div class="bg-black/40 p-4 rounded-xl border border-zinc-800">
+                                            <span class="text-zinc-500 block mb-1 uppercase text-[10px] font-black">Órgão:</span> 
+                                            <span class="text-white font-bold">${item.orgaoSancionador.nome}</span>
+                                        </div>
+                                    </div>
+                                    <button onclick="window.print()" class="mt-6 w-full bg-zinc-100 hover:bg-white text-black font-black py-4 rounded-2xl transition-all uppercase text-xs tracking-widest">
+                                        Gerar Laudo de Conformidade
+                                    </button>
                                 </div>`;
                         });
                     } else {
-                        divResultado.innerHTML = "<div class='bg-zinc-900 p-10 rounded-3xl text-zinc-500 font-bold uppercase'>Nenhuma sanção ativa encontrada.</div>";
+                        divResultado.innerHTML = "<div class='bg-zinc-900/50 border border-zinc-800 p-12 rounded-3xl text-center text-zinc-500 font-bold uppercase tracking-widest text-xs'>Nenhuma sanção ativa encontrada para este CNPJ.</div>";
                     }
                 } else {
-                   divResultado.innerHTML = "<div class='text-red-500 font-bold'>ERRO NA CHAVE DE API (" + respostaGoverno.status + ")</div>";
+                    divResultado.innerHTML = "<div class='text-red-500 text-center font-bold'>Erro na leitura dos dados. Tente novamente.</div>";
                 }
             } catch (erro) {
-                // Se der erro de CORS, tentamos o método de segurança 2
-                divResultado.innerHTML = "<div class='text-yellow-500 font-bold'>A REQUISIÇÃO FOI BLOQUEADA PELO NAVEGADOR. <br><br> TENTE ABRIR O SITE PELO CELULAR (4G) PARA TESTAR.</div>";
+                divResultado.innerHTML = "<div class='text-red-500 text-center p-6 font-black uppercase underline italic'>Falha crítica na conexão. Verifique sua chave de API ou tente via 4G.</div>";
             }
         }
     </script>
