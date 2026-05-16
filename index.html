@@ -9,7 +9,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { background: #09090b; color: #f4f4f5; font-family: 'Inter', sans-serif; }
         .glass-card { background: rgba(24, 24, 27, 0.8); border: 1px solid rgba(63, 63, 70, 0.4); backdrop-filter: blur(10px); }
-        .btn-glow:hover { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
     </style>
 </head>
 <body class="p-4 md:p-10">
@@ -29,7 +28,7 @@
                 <input type="text" id="cnpjInput" placeholder="Digite o CNPJ (só números)" 
                     class="flex-1 bg-black border border-zinc-700 rounded-2xl px-6 py-4 text-lg outline-none focus:border-emerald-500 transition-all text-white font-mono">
                 <button onclick="buscarNaBase()" 
-                    class="bg-emerald-500 hover:bg-emerald-400 text-black font-black px-10 py-4 rounded-2xl transition-all btn-glow uppercase tracking-tighter">
+                    class="bg-emerald-500 hover:bg-emerald-400 text-black font-black px-10 py-4 rounded-2xl transition-all uppercase tracking-tighter">
                     Consultar Agora
                 </button>
             </div>
@@ -49,72 +48,81 @@
             const divResultado = document.getElementById('resultado');
 
             if (cnpj.length !== 14) {
-                alert("Por favor, digite um CNPJ válido com 14 dígitos.");
+                alert("Por favor, digite um CNPJ válido.");
                 return;
             }
 
             divResultado.innerHTML = `
                 <div class='flex flex-col items-center justify-center p-10'>
                     <div class='w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4'></div>
-                    <div class='text-emerald-500 font-black uppercase tracking-tighter'>Acessando Portal da Transparência...</div>
+                    <div class='text-emerald-500 font-black uppercase tracking-tighter animate-pulse'>Acessando Base de Dados da CGU...</div>
                 </div>`;
 
-            // Chave purificada (sem espaços)
             const minhaChave = "0131b585c4b527e5ca52551d8ff7dbe3".trim();
             const targetUrl = "https://api.portaldatransparencia.gov.br/api-de-dados/ceis?cnpj=" + cnpj + "&pagina=1";
             
-            // Usamos AllOrigins para encapsular o pedido e evitar o erro de bloqueio do navegador
+            // Usamos a ponte AllOrigins para "embrulhar" o pedido
             const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(targetUrl);
 
             try {
                 const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error("Erro na ponte de conexão.");
+                
                 const data = await response.json();
                 
-                // O AllOrigins traz o resultado como texto dentro de 'contents'
-                // Precisamos converter esse texto em um objeto de dados real
-                const lista = JSON.parse(data.contents);
+                // O AllOrigins traz o resultado como texto dentro de 'contents'. 
+                // Precisamos forçar o navegador a ler esses 'contents' enviando a nossa chave oficial.
+                const respostaGoverno = await fetch(targetUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'chave-api-dados': minhaChave
+                    }
+                });
 
-                if (Array.isArray(lista)) {
-                    if (lista.length > 0) {
+                if (respostaGoverno.ok) {
+                    const dados = await respostaGoverno.json();
+                    
+                    if(dados && dados.length > 0) {
                         divResultado.innerHTML = "";
-                        lista.forEach(item => {
+                        dados.forEach(item => {
                             divResultado.innerHTML += `
                                 <div class="bg-zinc-900 border-l-8 border-emerald-500 p-8 rounded-3xl shadow-2xl relative mb-4">
-                                    <div class="absolute top-0 right-0 bg-emerald-500 text-black px-4 py-1 text-[10px] font-black uppercase tracking-tighter italic">Sanção Ativa</div>
+                                    <div class="absolute top-0 right-0 bg-emerald-500 text-black px-4 py-1 text-[10px] font-black uppercase tracking-tighter italic italic">Sanção Detectada</div>
                                     <h2 class="font-black text-2xl text-white uppercase leading-tight mb-2">${item.pessoa.nomeRazaoSocial}</h2>
                                     <p class="text-xs text-zinc-500 mb-6 font-mono font-bold uppercase tracking-widest italic">CNPJ: ${item.pessoa.cnpjFormatado}</p>
                                     
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-left">
                                         <div class="bg-black/40 p-4 rounded-xl border border-zinc-800">
-                                            <span class="text-zinc-600 block mb-1 uppercase text-[10px] font-black tracking-widest underline">Tipo de Sanção:</span> 
+                                            <span class="text-zinc-600 block mb-1 uppercase text-[10px] font-black tracking-widest underline underline">Tipo:</span> 
                                             <span class="text-emerald-400 font-bold uppercase">${item.tipoSanção.descricaoResumida}</span>
                                         </div>
                                         <div class="bg-black/40 p-4 rounded-xl border border-zinc-800">
-                                            <span class="text-zinc-600 block mb-1 uppercase text-[10px] font-black tracking-widest underline">Órgão Sancionador:</span> 
-                                            <span class="text-white font-bold uppercase italic">${item.orgaoSancionador.nome}</span>
+                                            <span class="text-zinc-600 block mb-1 uppercase text-[10px] font-black tracking-widest underline underline">Órgão:</span> 
+                                            <span class="text-white font-bold uppercase italic italic">${item.orgaoSancionador.nome}</span>
                                         </div>
                                     </div>
                                     <button onclick="window.print()" class="mt-8 w-full bg-zinc-100 hover:bg-white text-black font-black py-4 rounded-2xl transition-all uppercase text-xs tracking-widest shadow-xl">
-                                        Gerar Relatório de Visita Técnica
+                                        Gerar Laudo Técnico
                                     </button>
                                 </div>`;
                         });
                     } else {
                         divResultado.innerHTML = `
-                            <div class='bg-zinc-900/50 border border-zinc-800 p-16 rounded-3xl text-center shadow-inner'>
-                                <div class='text-zinc-500 font-black uppercase tracking-widest text-sm mb-2'>Consulta Concluída</div>
-                                <div class='text-zinc-400 font-bold uppercase italic text-xs underline text-center'>Nenhuma sanção ativa encontrada para este CNPJ no CEIS.</div>
+                            <div class='bg-zinc-900/50 border border-zinc-800 p-16 rounded-3xl text-center'>
+                                <div class='text-zinc-400 font-black uppercase tracking-widest text-sm mb-2'>Conformidade Identificada</div>
+                                <div class='text-zinc-600 font-bold uppercase italic text-xs underline'>Nenhuma sanção ativa encontrada para este CNPJ.</div>
                             </div>`;
                     }
                 } else {
-                    throw new Error("Resposta inválida do servidor.");
+                    divResultado.innerHTML = "<div class='text-red-500 font-black uppercase text-center'>Chave API não autorizada pelo Governo. Verifique seu e-mail da CGU.</div>";
                 }
             } catch (erro) {
                 divResultado.innerHTML = `
-                    <div class='text-red-500 text-center p-8 bg-red-500/5 border border-red-500/10 rounded-3xl'>
-                        <p class='font-black uppercase italic mb-2'>Erro de Credencial ou Conexão</p>
-                        <p class='text-xs text-zinc-500 font-bold uppercase tracking-widest'>
-                            Verifique se sua chave API foi ativada pelo Governo ou tente acessar via 4G no celular.
+                    <div class='text-yellow-500 text-center p-10 bg-yellow-500/5 border border-yellow-500/10 rounded-3xl'>
+                        <p class='font-black uppercase italic mb-2'>Sinal Interrompido pelo Navegador</p>
+                        <p class='text-xs text-zinc-600 font-bold uppercase tracking-widest'>
+                            Tente abrir via Dados Móveis (4G) ou em uma aba anônima.
                         </p>
                     </div>`;
             }
